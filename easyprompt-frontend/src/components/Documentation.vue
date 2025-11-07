@@ -28,7 +28,7 @@
             :to="`/docs/${prevPage.path}`"
             class="nav-prev"
           >
-            <span class="nav-direction">←</span>
+            <span class="nav-direction">上一页</span>
             <div class="nav-info">
               <span class="nav-label">上一页</span>
               <span class="nav-title">{{ prevPage.title }}</span>
@@ -44,7 +44,7 @@
               <span class="nav-label">下一页</span>
               <span class="nav-title">{{ nextPage.title }}</span>
             </div>
-            <span class="nav-direction">→</span>
+            <span class="nav-direction">下一页</span>
           </router-link>
         </div>
       </template>
@@ -138,36 +138,85 @@ const error = ref<string | null>(null)
 const documentation = ref<DocSection[]>([])
 const currentPageData = ref<DocPage | null>(null)
 
-// 预定义的文档结构
-const docStructure: DocSection[] = [
-  {
-    title: '快速开始',
-    pages: [
-      { title: '介绍', path: 'introduction', content: '' },
-      { title: '安装和设置', path: 'getting-started', content: '' }
-    ]
-  },
-  {
-    title: '核心功能',
-    pages: [
-      { title: '项目管理', path: 'projects', content: '' },
-      { title: '提示词管理', path: 'prompts', content: '' }
-    ]
-  },
-  {
-    title: '高级功能',
-    pages: [
-      { title: '数据库配置', path: 'database', content: '' },
-      { title: '数据导入导出', path: 'import-export', content: '' }
-    ]
-  },
-  {
-    title: 'API 参考',
-    pages: [
-      { title: 'API 概览', path: 'api-overview', content: '' }
+// 从服务器获取文档结构
+const fetchDocStructure = async (): Promise<DocSection[]> => {
+  try {
+    const response = await fetch(`${DOCS_BASE_URL}/docs`)
+    if (!response.ok) {
+      throw new Error(`无法获取文档列表: ${response.statusText}`)
+    }
+    
+    const files = await response.json()
+    
+    // 将文件列表转换为文档结构
+    const docMap = new Map<string, DocPage[]>()
+    
+    for (const file of files) {
+      // 从文件名中提取路径和标题
+      const path = file.replace('.md', '')
+      const title = extractTitleFromFile(file)
+      
+      // 根据文件路径确定分类
+      let category = '其他'
+      if (['introduction', 'getting-started'].includes(path)) {
+        category = '快速开始'
+      } else if (['projects', 'prompts'].includes(path)) {
+        category = '核心功能'
+      } else if (['database', 'import-export', 'data-persistence'].includes(path)) {
+        category = '高级功能'
+      } else if (['api-overview'].includes(path)) {
+        category = 'API 参考'
+      }
+      
+      if (!docMap.has(category)) {
+        docMap.set(category, [])
+      }
+      
+      docMap.get(category)?.push({
+        title,
+        path,
+        content: ''
+      })
+    }
+    
+    // 转换为 DocSection 数组
+    const sections: DocSection[] = []
+    for (const [title, pages] of docMap.entries()) {
+      sections.push({ title, pages })
+    }
+    
+    return sections
+  } catch (err) {
+    console.error('获取文档结构失败:', err)
+    // 返回默认结构
+    return [
+      {
+        title: '快速开始',
+        pages: [
+          { title: '介绍', path: 'introduction', content: '' },
+          { title: '安装和设置', path: 'getting-started', content: '' }
+        ]
+      }
     ]
   }
-]
+}
+
+// 从文件名提取标题
+const extractTitleFromFile = (filename: string): string => {
+  const name = filename.replace('.md', '')
+  const titleMap: Record<string, string> = {
+    'introduction': '介绍',
+    'getting-started': '安装和设置',
+    'projects': '项目管理',
+    'prompts': '提示词管理',
+    'database': '数据库配置',
+    'import-export': '数据导入导出',
+    'data-persistence': '数据持久化',
+    'api-overview': 'API 概览'
+  }
+  
+  return titleMap[name] || name
+}
 
 // 获取当前页面路径
 const currentPage = computed(() => {
@@ -283,8 +332,8 @@ watch(() => route.path, () => {
 })
 
 // 组件挂载时加载文档
-onMounted(() => {
-  documentation.value = docStructure
+onMounted(async () => {
+  documentation.value = await fetchDocStructure()
   loadDocument()
 })
 </script>
@@ -377,7 +426,7 @@ onMounted(() => {
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   padding: 2rem;
-  max-width: 800px;
+  max-width: 1200px;
 }
 
 .doc-header {
@@ -400,6 +449,8 @@ onMounted(() => {
 .doc-body {
   line-height: 1.7;
   color: #333;
+  text-align: left;
+  padding-left: 1rem;
 }
 
 .doc-body h2 {

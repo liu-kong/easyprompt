@@ -25,7 +25,7 @@ export class ExportController {
       const { tableId } = req.params;
       const { operation = 'INSERT' } = req.query;
       const sql = await this.exportService.exportPromptsAsSQL(
-        Number(tableId),
+        tableId,
         operation as 'INSERT' | 'UPDATE'
       );
       res.setHeader('Content-Type', 'text/sql');
@@ -41,7 +41,7 @@ export class ExportController {
       const { projectId } = req.params;
       const { operation = 'INSERT' } = req.query;
       const sql = await this.exportService.exportAllTablesAsSQL(
-        Number(projectId),
+        projectId,
         operation as 'INSERT' | 'UPDATE'
       );
       res.setHeader('Content-Type', 'text/sql');
@@ -55,7 +55,7 @@ export class ExportController {
   exportTableAsJSON = async (req: Request, res: Response) => {
     try {
       const { tableId } = req.params;
-      const data = await this.exportService.exportTableAsJSON(Number(tableId));
+      const data = await this.exportService.exportTableAsJSON(tableId);
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', `attachment; filename="table_${tableId}_export.json"`);
       res.json(data);
@@ -67,7 +67,7 @@ export class ExportController {
   exportProjectAsJSON = async (req: Request, res: Response) => {
     try {
       const { projectId } = req.params;
-      const data = await this.exportService.exportProjectAsJSON(Number(projectId));
+      const data = await this.exportService.exportProjectAsJSON(projectId);
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', `attachment; filename="project_${projectId}_export.json"`);
       res.json(data);

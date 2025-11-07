@@ -1,35 +1,30 @@
-import { Knex } from 'knex';
 import { Prompt, ComparisonResult } from '../models';
-import { DatabaseManager } from '../database/connection';
+import { LowDbManager } from '../database/lowdb-manager';
 
 export class ComparisonService {
-  private dbManager: DatabaseManager;
+  private dbManager: LowDbManager;
 
   constructor() {
-    this.dbManager = DatabaseManager.getInstance();
+    this.dbManager = LowDbManager.getInstance();
   }
 
-  async compareTables(tableId1: number, tableId2: number): Promise<ComparisonResult> {
-    const connection = this.dbManager.getConnection('default', 'easyprompt.db');
-    if (!connection) {
-      throw new Error('Database connection not found');
-    }
-
-    const table1Info = await connection('prompt_tables').where('id', tableId1).first();
-    const table2Info = await connection('prompt_tables').where('id', tableId2).first();
+  async compareTables(tableId1: string, tableId2: string): Promise<ComparisonResult> {
+    const db = this.dbManager.getDb();
+    const table1Info = db.data?.promptTables.find(t => t.id === tableId1 && !t.is_deleted);
+    const table2Info = db.data?.promptTables.find(t => t.id === tableId2 && !t.is_deleted);
 
     if (!table1Info || !table2Info) {
       throw new Error('One or both tables not found');
     }
 
-    const prompts1 = await connection('prompts').where('table_id', tableId1);
-    const prompts2 = await connection('prompts').where('table_id', tableId2);
+    const prompts1 = db.data?.prompts.filter(p => p.table_id === tableId1 && !p.is_deleted) || [];
+    const prompts2 = db.data?.prompts.filter(p => p.table_id === tableId2 && !p.is_deleted) || [];
 
     const differences: ComparisonResult['differences'] = [];
 
     // 创建提示词映射以便快速查找
-    const prompts1Map = new Map(prompts1.map(p => [p.code, p]));
-    const prompts2Map = new Map(prompts2.map(p => [p.code, p]));
+    const prompts1Map = new Map(prompts1.map((p: Prompt) => [p.code, p]));
+    const prompts2Map = new Map(prompts2.map((p: Prompt) => [p.code, p]));
 
     // 检查表1中有但表2中没有的提示词
     for (const [code, prompt1] of prompts1Map) {
@@ -60,52 +55,52 @@ export class ComparisonService {
       const prompt2 = prompts2Map.get(code);
       if (prompt2) {
         // 比较标题
-        if (prompt1.title !== prompt2.title) {
+        if ((prompt1 as Prompt).title !== (prompt2 as Prompt).title) {
           differences.push({
             code,
             field: 'title',
-            value1: prompt1.title,
-            value2: prompt2.title,
+            value1: (prompt1 as Prompt).title,
+            value2: (prompt2 as Prompt).title,
           });
         }
 
         // 比较内容
-        if (prompt1.content !== prompt2.content) {
+        if ((prompt1 as Prompt).content !== (prompt2 as Prompt).content) {
           differences.push({
             code,
             field: 'content',
-            value1: prompt1.content,
-            value2: prompt2.content,
+            value1: (prompt1 as Prompt).content,
+            value2: (prompt2 as Prompt).content,
           });
         }
 
         // 比较版本
-        if (prompt1.version !== prompt2.version) {
+        if ((prompt1 as Prompt).version !== (prompt2 as Prompt).version) {
           differences.push({
             code,
             field: 'version',
-            value1: prompt1.version,
-            value2: prompt2.version,
+            value1: (prompt1 as Prompt).version,
+            value2: (prompt2 as Prompt).version,
           });
         }
 
         // 比较标签
-        if (prompt1.tags !== prompt2.tags) {
+        if ((prompt1 as Prompt).tags !== (prompt2 as Prompt).tags) {
           differences.push({
             code,
             field: 'tags',
-            value1: prompt1.tags || '',
-            value2: prompt2.tags || '',
+            value1: (prompt1 as Prompt).tags || '',
+            value2: (prompt2 as Prompt).tags || '',
           });
         }
 
         // 比较激活状态
-        if (prompt1.is_active !== prompt2.is_active) {
+        if ((prompt1 as Prompt).is_active !== (prompt2 as Prompt).is_active) {
           differences.push({
             code,
             field: 'is_active',
-            value1: prompt1.is_active,
-            value2: prompt2.is_active,
+            value1: (prompt1 as Prompt).is_active,
+            value2: (prompt2 as Prompt).is_active,
           });
         }
       }
@@ -118,21 +113,10 @@ export class ComparisonService {
     };
   }
 
-  async comparePromptVersions(promptId: number, version1: string, version2: string): Promise<any> {
-    const connection = this.dbManager.getConnection('default', 'easyprompt.db');
-    if (!connection) {
-      throw new Error('Database connection not found');
-    }
-
-    const version1Record = await connection('prompt_versions')
-      .where('prompt_id', promptId)
-      .where('version', version1)
-      .first();
-
-    const version2Record = await connection('prompt_versions')
-      .where('prompt_id', promptId)
-      .where('version', version2)
-      .first();
+  async comparePromptVersions(promptId: string, version1: string, version2: string): Promise<any> {
+    const db = this.dbManager.getDb();
+    const version1Record = db.data?.promptVersions.find(v => v.prompt_id === promptId && v.version === version1 && !v.is_deleted);
+    const version2Record = db.data?.promptVersions.find(v => v.prompt_id === promptId && v.version === version2 && !v.is_deleted);
 
     if (!version1Record || !version2Record) {
       throw new Error('One or both versions not found');
@@ -156,27 +140,24 @@ export class ComparisonService {
     };
   }
 
-  async getTableStatistics(tableId: number): Promise<any> {
-    const connection = this.dbManager.getConnection('default', 'easyprompt.db');
-    if (!connection) {
-      throw new Error('Database connection not found');
-    }
-
-    const tableInfo = await connection('prompt_tables').where('id', tableId).first();
+  async getTableStatistics(tableId: string): Promise<any> {
+    const db = this.dbManager.getDb();
+    const tableInfo = db.data?.promptTables.find(t => t.id === tableId && !t.is_deleted);
     if (!tableInfo) {
       throw new Error('Table not found');
     }
 
-    const prompts = await connection('prompts').where('table_id', tableId);
-    const activePrompts = prompts.filter(p => p.is_active);
-    const versions = await connection('prompt_versions')
-      .join('prompts', 'prompt_versions.prompt_id', 'prompts.id')
-      .where('prompts.table_id', tableId);
+    const prompts = db.data?.prompts.filter(p => p.table_id === tableId && !p.is_deleted) || [];
+    const activePrompts = prompts.filter((p: Prompt) => p.is_active);
+    const versions = db.data?.promptVersions.filter(v => {
+      const prompt = prompts.find((p: Prompt) => p.id === v.prompt_id);
+      return prompt && !v.is_deleted;
+    }) || [];
 
     const tagCounts = new Map<string, number>();
     for (const prompt of prompts) {
-      if (prompt.tags) {
-        const tags = prompt.tags.split(',').map((t: string) => t.trim());
+      if ((prompt as Prompt).tags) {
+        const tags = (prompt as Prompt).tags!.split(',').map((t: string) => t.trim());
         for (const tag of tags) {
           tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
         }
@@ -191,29 +172,26 @@ export class ComparisonService {
       total_versions: versions.length,
       average_versions_per_prompt: versions.length / prompts.length || 0,
       tag_distribution: Object.fromEntries(tagCounts),
-      last_updated: Math.max(...prompts.map(p => new Date(p.updated_at).getTime())),
+      last_updated: Math.max(...prompts.map((p: Prompt) => new Date(p.updated_at).getTime())),
     };
   }
 
-  async getProjectStatistics(projectId: number): Promise<any> {
-    const connection = this.dbManager.getConnection('default', 'easyprompt.db');
-    if (!connection) {
-      throw new Error('Database connection not found');
-    }
-
-    const projectInfo = await connection('projects').where('id', projectId).first();
+  async getProjectStatistics(projectId: string): Promise<any> {
+    const db = this.dbManager.getDb();
+    const projectInfo = db.data?.projects.find(p => p.id === projectId && !p.is_deleted);
     if (!projectInfo) {
       throw new Error('Project not found');
     }
 
-    const tables = await connection('prompt_tables').where('project_id', projectId);
-    const tableIds = tables.map(t => t.id);
+    const tables = db.data?.promptTables.filter(t => t.project_id === projectId && !t.is_deleted) || [];
+    const tableIds = tables.map((t: any) => t.id);
     
-    const prompts = await connection('prompts').whereIn('table_id', tableIds);
-    const activePrompts = prompts.filter(p => p.is_active);
-    const versions = await connection('prompt_versions')
-      .join('prompts', 'prompt_versions.prompt_id', 'prompts.id')
-      .whereIn('prompts.table_id', tableIds);
+    const prompts = db.data?.prompts.filter((p: Prompt) => tableIds.includes(p.table_id) && !p.is_deleted) || [];
+    const activePrompts = prompts.filter((p: Prompt) => p.is_active);
+    const versions = db.data?.promptVersions.filter(v => {
+      const prompt = prompts.find((p: Prompt) => p.id === v.prompt_id);
+      return prompt && !v.is_deleted;
+    }) || [];
 
     return {
       project_name: projectInfo.name,
@@ -224,7 +202,7 @@ export class ComparisonService {
       total_versions: versions.length,
       average_versions_per_prompt: versions.length / prompts.length || 0,
       average_prompts_per_table: prompts.length / tables.length || 0,
-      last_updated: Math.max(...prompts.map(p => new Date(p.updated_at).getTime())),
+      last_updated: Math.max(...prompts.map((p: Prompt) => new Date(p.updated_at).getTime())),
     };
   }
 }

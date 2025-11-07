@@ -12,8 +12,8 @@ export class ComparisonController {
     try {
       const { tableId1, tableId2 } = req.params;
       const result = await this.comparisonService.compareTables(
-        Number(tableId1),
-        Number(tableId2)
+        tableId1,
+        tableId2
       );
       res.json(result);
     } catch (error) {
@@ -25,7 +25,7 @@ export class ComparisonController {
     try {
       const { promptId, version1, version2 } = req.params;
       const result = await this.comparisonService.comparePromptVersions(
-        Number(promptId),
+        promptId,
         version1,
         version2
       );
@@ -38,7 +38,7 @@ export class ComparisonController {
   getTableStatistics = async (req: Request, res: Response) => {
     try {
       const { tableId } = req.params;
-      const statistics = await this.comparisonService.getTableStatistics(Number(tableId));
+      const statistics = await this.comparisonService.getTableStatistics(tableId);
       res.json(statistics);
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
@@ -48,7 +48,7 @@ export class ComparisonController {
   getProjectStatistics = async (req: Request, res: Response) => {
     try {
       const { projectId } = req.params;
-      const statistics = await this.comparisonService.getProjectStatistics(Number(projectId));
+      const statistics = await this.comparisonService.getProjectStatistics(projectId);
       res.json(statistics);
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });

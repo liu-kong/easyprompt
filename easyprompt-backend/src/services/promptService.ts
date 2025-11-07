@@ -1,37 +1,34 @@
-import { Knex } from 'knex';
 import { Prompt, PromptVersion } from '../models';
-import { DatabaseManager } from '../database/connection';
+import { LowDbManager } from '../database/lowdb-manager';
 import { generateSnowflakeId } from '../utils/snowflake';
 
 export class PromptService {
-  private dbManager: DatabaseManager;
+  private dbManager: LowDbManager;
 
   constructor() {
-    this.dbManager = DatabaseManager.getInstance();
+    this.dbManager = LowDbManager.getInstance();
   }
 
   async createPrompt(promptData: Omit<Prompt, 'id' | 'created_at' | 'updated_at'>): Promise<Prompt> {
-    const connection = this.dbManager.getConnection('default', 'easyprompt.db');
-    if (!connection) {
-      throw new Error('Database connection not found');
-    }
-
+    const db = this.dbManager.getDb();
     const version = promptData.version || '1.0.0';
     const promptId = generateSnowflakeId();
 
-    const [prompt] = await connection('prompts')
-      .insert({
-        id: promptId,
-        table_id: promptData.table_id,
-        code: promptData.code,
-        title: promptData.title,
-        content: promptData.content,
-        version: version,
-        tags: promptData.tags,
-        is_active: promptData.is_active,
-        is_deleted: false,
-      })
-      .returning('*');
+    const prompt: Prompt = {
+      id: promptId,
+      table_id: promptData.table_id,
+      code: promptData.code,
+      title: promptData.title,
+      content: promptData.content,
+      version: version,
+      tags: promptData.tags,
+      is_active: promptData.is_active,
+      is_deleted: false,
+      created_at: new Date(),
+      updated_at: new Date(),
+    };
+
+    db.data?.prompts.push(prompt);
 
     // 创建版本记录
     await this.createVersion({
@@ -42,68 +39,49 @@ export class PromptService {
       is_deleted: false,
     });
 
+    await this.dbManager.save();
     return prompt;
   }
 
   async getPrompts(tableId?: string): Promise<Prompt[]> {
-    const connection = this.dbManager.getConnection('default', 'easyprompt.db');
-    if (!connection) {
-      throw new Error('Database connection not found');
-    }
-
-    let query = connection('prompts').where('is_deleted', false);
+    const db = this.dbManager.getDb();
+    let prompts = db.data?.prompts.filter(p => !p.is_deleted) || [];
+    
     if (tableId) {
-      query = query.where('table_id', tableId);
+      prompts = prompts.filter(p => p.table_id === tableId);
     }
-    return await query.select('*');
+    
+    return prompts;
   }
 
   async getPromptById(id: string): Promise<Prompt | null> {
-    const connection = this.dbManager.getConnection('default', 'easyprompt.db');
-    if (!connection) {
-      throw new Error('Database connection not found');
-    }
-
-    const prompt = await connection('prompts')
-      .where('id', id)
-      .where('is_deleted', false)
-      .first();
+    const db = this.dbManager.getDb();
+    const prompt = db.data?.prompts.find(p => p.id === id && !p.is_deleted);
     return prompt || null;
   }
 
   async getPromptByCode(tableId: string, code: string): Promise<Prompt | null> {
-    const connection = this.dbManager.getConnection('default', 'easyprompt.db');
-    if (!connection) {
-      throw new Error('Database connection not found');
-    }
-
-    const prompt = await connection('prompts')
-      .where('table_id', tableId)
-      .where('code', code)
-      .where('is_deleted', false)
-      .first();
+    const db = this.dbManager.getDb();
+    const prompt = db.data?.prompts.find(p => p.table_id === tableId && p.code === code && !p.is_deleted);
     return prompt || null;
   }
 
   async updatePrompt(id: string, promptData: Partial<Prompt>, createVersion: boolean = true, changeLog?: string): Promise<Prompt | null> {
-    const connection = this.dbManager.getConnection('default', 'easyprompt');
-    if (!connection) {
-      throw new Error('Database connection not found');
-    }
-
-    const existingPrompt = await this.getPromptById(id);
-    if (!existingPrompt) {
+    const db = this.dbManager.getDb();
+    const promptIndex = db.data?.prompts.findIndex(p => p.id === id && !p.is_deleted);
+    
+    if (promptIndex === undefined || promptIndex === -1) {
       return null;
     }
 
-    const [updatedPrompt] = await connection('prompts')
-      .where('id', id)
-      .where('is_deleted', false)
-      .update({
-        ...promptData,
-        updated_at: new Date(),
-      })
-      .returning('*');
+    const existingPrompt = db.data!.prompts[promptIndex];
+    const updatedPrompt = {
+      ...existingPrompt,
+      ...promptData,
+      updated_at: new Date(),
+    };
+
+    db.data!.prompts[promptIndex] = updatedPrompt;
 
     // 如果内容发生变化，创建新版本
     if (createVersion && promptData.content && promptData.content !== existingPrompt.content) {
@@ -117,74 +95,57 @@ export class PromptService {
       });
 
       // 更新提示词的版本号
-      await connection('prompts')
-        .where('id', id)
-        .update({ version: newVersion });
+      updatedPrompt.version = newVersion;
+      db.data!.prompts[promptIndex] = updatedPrompt;
     }
 
-    return updatedPrompt || null;
+    await this.dbManager.save();
+    return updatedPrompt;
   }
 
   async deletePrompt(id: string): Promise<boolean> {
-    const connection = this.dbManager.getConnection('default', 'easyprompt.db');
-    if (!connection) {
-      throw new Error('Database connection not found');
+    const db = this.dbManager.getDb();
+    const promptIndex = db.data?.prompts.findIndex(p => p.id === id && !p.is_deleted);
+    
+    if (promptIndex === undefined || promptIndex === -1) {
+      return false;
     }
 
-    const deletedCount = await connection('prompts')
-      .where('id', id)
-      .where('is_deleted', false)
-      .update({
-        is_deleted: true,
-        updated_at: new Date()
-      });
-    return deletedCount > 0;
+    db.data!.prompts[promptIndex].is_deleted = true;
+    db.data!.prompts[promptIndex].updated_at = new Date();
+    await this.dbManager.save();
+
+    return true;
   }
 
   async createVersion(versionData: Omit<PromptVersion, 'id' | 'created_at'>): Promise<PromptVersion> {
-    const connection = this.dbManager.getConnection('default', 'easyprompt');
-    if (!connection) {
-      throw new Error('Database connection not found');
-    }
+    const db = this.dbManager.getDb();
+    const version: PromptVersion = {
+      id: generateSnowflakeId(),
+      prompt_id: versionData.prompt_id,
+      version: versionData.version,
+      content: versionData.content,
+      change_log: versionData.change_log,
+      is_deleted: false,
+      created_at: new Date(),
+    };
 
-    const [version] = await connection('prompt_versions')
-      .insert({
-        id: generateSnowflakeId(),
-        prompt_id: versionData.prompt_id,
-        version: versionData.version,
-        content: versionData.content,
-        change_log: versionData.change_log,
-        is_deleted: false,
-      })
-      .returning('*');
+    db.data?.promptVersions.push(version);
+    await this.dbManager.save();
 
     return version;
   }
 
   async getVersions(promptId: string): Promise<PromptVersion[]> {
-    const connection = this.dbManager.getConnection('default', 'easyprompt.db');
-    if (!connection) {
-      throw new Error('Database connection not found');
-    }
-
-    return await connection('prompt_versions')
-      .where('prompt_id', promptId)
-      .where('is_deleted', false)
-      .orderBy('created_at', 'desc')
-      .select('*');
+    const db = this.dbManager.getDb();
+    return db.data?.promptVersions
+      .filter(v => v.prompt_id === promptId && !v.is_deleted)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) || [];
   }
 
   async getVersion(promptId: string, version: string): Promise<PromptVersion | null> {
-    const connection = this.dbManager.getConnection('default', 'easyprompt');
-    if (!connection) {
-      throw new Error('Database connection not found');
-    }
-
-    const versionRecord = await connection('prompt_versions')
-      .where('prompt_id', promptId)
-      .where('version', version)
-      .where('is_deleted', false)
-      .first();
+    const db = this.dbManager.getDb();
+    const versionRecord = db.data?.promptVersions.find(v => v.prompt_id === promptId && v.version === version && !v.is_deleted);
     return versionRecord || null;
   }
 
@@ -210,23 +171,20 @@ export class PromptService {
   }
 
   async searchPrompts(query: string, tableId?: string): Promise<Prompt[]> {
-    const connection = this.dbManager.getConnection('default', 'easyprompt');
-    if (!connection) {
-      throw new Error('Database connection not found');
-    }
-
-    let dbQuery = connection('prompts')
-      .where('is_deleted', false)
-      .where(function() {
-        this.where('title', 'like', `%${query}%`)
-            .orWhere('content', 'like', `%${query}%`)
-            .orWhere('code', 'like', `%${query}%`);
-      });
+    const db = this.dbManager.getDb();
+    let prompts = db.data?.prompts.filter(p => !p.is_deleted) || [];
+    
+    // 搜索标题、内容或代码
+    prompts = prompts.filter(p =>
+      p.title.toLowerCase().includes(query.toLowerCase()) ||
+      p.content.toLowerCase().includes(query.toLowerCase()) ||
+      p.code.toLowerCase().includes(query.toLowerCase())
+    );
 
     if (tableId) {
-      dbQuery = dbQuery.where('table_id', tableId);
+      prompts = prompts.filter(p => p.table_id === tableId);
     }
 
-    return await dbQuery.select('*');
+    return prompts;
   }
 }

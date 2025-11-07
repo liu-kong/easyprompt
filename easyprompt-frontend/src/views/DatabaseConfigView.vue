@@ -17,8 +17,83 @@
     </div>
 
     <div v-else class="config-list">
+      <!-- SQL命令引导区域 -->
+      <div class="sql-guide-section">
+        <h3>提示词表创建指南</h3>
+        <p>在连接数据库之前，请先在您的数据库中创建提示词表。根据您的数据库类型，执行以下SQL命令：</p>
+        
+        <div class="table-name-input">
+          <label for="promptsTableName">提示词表名:</label>
+          <input
+            id="promptsTableName"
+            v-model="promptsTableName"
+            type="text"
+            placeholder="prompts"
+            @input="updateSqlScripts"
+          />
+        </div>
+        
+        <div class="table-name-input">
+          <label for="promptTablesTableName">提示词分类表名:</label>
+          <input
+            id="promptTablesTableName"
+            v-model="promptTablesTableName"
+            type="text"
+            placeholder="prompt_tables"
+            @input="updateSqlScripts"
+          />
+        </div>
+        
+        <div class="sql-tabs">
+          <button
+            @click="activeSqlTab = 'mysql'"
+            :class="['sql-tab', { active: activeSqlTab === 'mysql' }]"
+          >
+            MySQL
+          </button>
+          <button
+            @click="activeSqlTab = 'postgresql'"
+            :class="['sql-tab', { active: activeSqlTab === 'postgresql' }]"
+          >
+            PostgreSQL
+          </button>
+        </div>
+        
+        <div class="sql-content">
+          <div v-if="activeSqlTab === 'mysql'" class="sql-code-container">
+            <h4>MySQL 提示词表创建命令</h4>
+            <div class="sql-code">
+              <pre><code>{{ mysqlSql }}</code></pre>
+            </div>
+            <button @click="copySqlCode('mysql')" class="copy-sql-btn">
+              {{ mysqlCopied ? '已复制!' : '复制SQL代码' }}
+            </button>
+          </div>
+          
+          <div v-if="activeSqlTab === 'postgresql'" class="sql-code-container">
+            <h4>PostgreSQL 提示词表创建命令</h4>
+            <div class="sql-code">
+              <pre><code>{{ postgresqlSql }}</code></pre>
+            </div>
+            <button @click="copySqlCode('postgresql')" class="copy-sql-btn">
+              {{ postgresqlCopied ? '已复制!' : '复制SQL代码' }}
+            </button>
+          </div>
+        </div>
+        
+        <div class="connection-guide">
+          <h4>连接步骤</h4>
+          <ol>
+            <li>在您的数据库管理工具中执行上述SQL命令</li>
+            <li>确认表创建成功后，点击"新增数据库配置"按钮</li>
+            <li>填写数据库连接信息并测试连接</li>
+            <li>连接成功后，即可开始使用提示词管理功能</li>
+          </ol>
+        </div>
+      </div>
+      
       <div v-if="databaseConfigs.length === 0" class="empty-state">
-        暂无数据库配置，请点击"新增数据库配置"按钮添加
+        暂无数据库配置，请先执行SQL创建表，然后点击"新增数据库配置"按钮添加
       </div>
       
       <div v-else class="config-cards">
@@ -141,7 +216,7 @@
                 id="port"
                 v-model.number="configForm.port"
                 type="number"
-                :placeholder="getDefaultPort(configForm.type)"
+                :placeholder="String(getDefaultPort(configForm.type))"
               />
             </div>
             
@@ -221,6 +296,111 @@ const databaseConfigs = ref<DatabaseConfig[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const testingConnection = ref<string | null>(null)
+
+// SQL引导区域相关状态
+const activeSqlTab = ref<'mysql' | 'postgresql'>('mysql')
+const mysqlCopied = ref(false)
+const postgresqlCopied = ref(false)
+const promptsTableName = ref('prompts')
+const promptTablesTableName = ref('prompt_tables')
+const mysqlSql = ref('')
+const postgresqlSql = ref('')
+
+// 初始化SQL脚本
+const updateSqlScripts = () => {
+  // MySQL SQL脚本
+  mysqlSql.value = `-- 创建提示词表
+CREATE TABLE IF NOT EXISTS \`${promptsTableName.value}\` (
+  \`id\` VARCHAR(50) PRIMARY KEY COMMENT '主键ID',
+  \`code\` VARCHAR(100) NOT NULL UNIQUE COMMENT '提示词编码',
+  \`title\` VARCHAR(255) NOT NULL COMMENT '提示词标题',
+  \`content\` TEXT NOT NULL COMMENT '提示词内容',
+  \`tags\` VARCHAR(500) COMMENT '标签，多个标签用逗号分隔',
+  \`version\` VARCHAR(50) DEFAULT '1.0.0' COMMENT '版本号',
+  \`description\` TEXT COMMENT '描述信息',
+  \`is_active\` BOOLEAN DEFAULT TRUE COMMENT '是否激活',
+  \`table_id\` VARCHAR(50) NOT NULL COMMENT '所属分类表ID',
+  \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX \`idx_${promptsTableName.value}_table_id\` (\`table_id\`),
+  INDEX \`idx_${promptsTableName.value}_code\` (\`code\`),
+  INDEX \`idx_${promptsTableName.value}_is_active\` (\`is_active\`)
+) COMMENT='提示词表';
+
+-- 创建提示词分类表
+CREATE TABLE IF NOT EXISTS \`${promptTablesTableName.value}\` (
+  \`id\` VARCHAR(50) PRIMARY KEY COMMENT '主键ID',
+  \`name\` VARCHAR(255) NOT NULL COMMENT '分类名称',
+  \`table_name\` VARCHAR(255) NOT NULL UNIQUE COMMENT '表名',
+  \`project_id\` VARCHAR(50) NOT NULL COMMENT '所属项目ID',
+  \`description\` TEXT COMMENT '描述信息',
+  \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX \`idx_${promptTablesTableName.value}_project_id\` (\`project_id\`)
+) COMMENT='提示词分类表';`
+
+  // PostgreSQL SQL脚本
+  postgresqlSql.value = `-- 创建提示词表
+CREATE TABLE IF NOT EXISTS ${promptsTableName.value} (
+  id VARCHAR(50) PRIMARY KEY,
+  code VARCHAR(100) NOT NULL UNIQUE,
+  title VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  tags VARCHAR(500),
+  version VARCHAR(50) DEFAULT '1.0.0',
+  description TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  table_id VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 添加表注释
+COMMENT ON TABLE ${promptsTableName.value} IS '提示词表';
+COMMENT ON COLUMN ${promptsTableName.value}.id IS '主键ID';
+COMMENT ON COLUMN ${promptsTableName.value}.code IS '提示词编码';
+COMMENT ON COLUMN ${promptsTableName.value}.title IS '提示词标题';
+COMMENT ON COLUMN ${promptsTableName.value}.content IS '提示词内容';
+COMMENT ON COLUMN ${promptsTableName.value}.tags IS '标签，多个标签用逗号分隔';
+COMMENT ON COLUMN ${promptsTableName.value}.version IS '版本号';
+COMMENT ON COLUMN ${promptsTableName.value}.description IS '描述信息';
+COMMENT ON COLUMN ${promptsTableName.value}.is_active IS '是否激活';
+COMMENT ON COLUMN ${promptsTableName.value}.table_id IS '所属分类表ID';
+COMMENT ON COLUMN ${promptsTableName.value}.created_at IS '创建时间';
+COMMENT ON COLUMN ${promptsTableName.value}.updated_at IS '更新时间';
+
+-- 创建索引
+CREATE INDEX IF NOT EXISTS idx_${promptsTableName.value}_table_id ON ${promptsTableName.value}(table_id);
+CREATE INDEX IF NOT EXISTS idx_${promptsTableName.value}_code ON ${promptsTableName.value}(code);
+CREATE INDEX IF NOT EXISTS idx_${promptsTableName.value}_is_active ON ${promptsTableName.value}(is_active);
+
+-- 创建提示词分类表
+CREATE TABLE IF NOT EXISTS ${promptTablesTableName.value} (
+  id VARCHAR(50) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  table_name VARCHAR(255) NOT NULL UNIQUE,
+  project_id VARCHAR(50) NOT NULL,
+  description TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 添加表注释
+COMMENT ON TABLE ${promptTablesTableName.value} IS '提示词分类表';
+COMMENT ON COLUMN ${promptTablesTableName.value}.id IS '主键ID';
+COMMENT ON COLUMN ${promptTablesTableName.value}.name IS '分类名称';
+COMMENT ON COLUMN ${promptTablesTableName.value}.table_name IS '表名';
+COMMENT ON COLUMN ${promptTablesTableName.value}.project_id IS '所属项目ID';
+COMMENT ON COLUMN ${promptTablesTableName.value}.description IS '描述信息';
+COMMENT ON COLUMN ${promptTablesTableName.value}.created_at IS '创建时间';
+COMMENT ON COLUMN ${promptTablesTableName.value}.updated_at IS '更新时间';
+
+-- 创建索引
+CREATE INDEX IF NOT EXISTS idx_${promptTablesTableName.value}_project_id ON ${promptTablesTableName.value}(project_id);`
+}
+
+// 初始化SQL脚本
+updateSqlScripts()
 
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
@@ -303,10 +483,10 @@ const testConnection = async (config: DatabaseConfig) => {
   testingConnection.value = config.id
   try {
     const response = await api.post('/database-configs/test', config)
-    if (response.success) {
+    if (response.data && response.data.success) {
       alert('连接测试成功！')
     } else {
-      alert(`连接测试失败：${response.message}`)
+      alert(`连接测试失败：${response.data ? response.data.message : '未知错误'}`)
     }
   } catch (err) {
     alert(`连接测试失败：${(err as Error).message}`)
@@ -318,10 +498,10 @@ const testConnection = async (config: DatabaseConfig) => {
 const testCurrentConfig = async () => {
   try {
     const response = await api.post('/database-configs/test', configForm.value)
-    if (response.success) {
+    if (response.data && response.data.success) {
       alert('连接测试成功！')
     } else {
-      alert(`连接测试失败：${response.message}`)
+      alert(`连接测试失败：${response.data ? response.data.message : '未知错误'}`)
     }
   } catch (err) {
     alert(`连接测试失败：${(err as Error).message}`)
@@ -397,6 +577,24 @@ const closeDeleteModal = () => {
 
 const clearError = () => {
   error.value = null
+}
+
+// 复制SQL代码功能
+const copySqlCode = async (type: 'mysql' | 'postgresql') => {
+  const sqlCode = type === 'mysql' ? mysqlSql.value : postgresqlSql.value
+  try {
+    await navigator.clipboard.writeText(sqlCode)
+    if (type === 'mysql') {
+      mysqlCopied.value = true
+      setTimeout(() => { mysqlCopied.value = false }, 2000)
+    } else {
+      postgresqlCopied.value = true
+      setTimeout(() => { postgresqlCopied.value = false }, 2000)
+    }
+  } catch (err) {
+    console.error('复制失败:', err)
+    alert('复制失败，请手动复制')
+  }
 }
 </script>
 
@@ -625,5 +823,156 @@ const clearError = () => {
 .btn-sm {
   padding: 0.25rem 0.5rem;
   font-size: 0.8rem;
+}
+
+/* SQL引导区域样式 */
+.sql-guide-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid #e9ecef;
+}
+
+.sql-guide-section h3 {
+  margin-top: 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.sql-guide-section p {
+  margin-bottom: 1.5rem;
+  color: #495057;
+  line-height: 1.5;
+}
+
+.table-name-input {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.table-name-input label {
+  min-width: 140px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.table-name-input input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.table-name-input input:focus {
+  outline: none;
+  border-color: #1976D2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+}
+
+.sql-tabs {
+  display: flex;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.sql-tab {
+  background: none;
+  border: none;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #6c757d;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.sql-tab:hover {
+  color: #495057;
+}
+
+.sql-tab.active {
+  color: #1976D2;
+  border-bottom-color: #1976D2;
+  font-weight: 500;
+}
+
+.sql-content {
+  margin-bottom: 1.5rem;
+}
+
+.sql-code-container {
+  background: white;
+  border-radius: 6px;
+  padding: 1rem;
+  border: 1px solid #dee2e6;
+}
+
+.sql-code-container h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #495057;
+  font-size: 1rem;
+}
+
+.sql-code {
+  background: #f8f9fa;
+  border-radius: 4px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.sql-code pre {
+  margin: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #495057;
+  white-space: pre-wrap;
+}
+
+.copy-sql-btn {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.copy-sql-btn:hover {
+  background: #5a6268;
+}
+
+.connection-guide {
+  background: white;
+  border-radius: 6px;
+  padding: 1rem;
+  border: 1px solid #dee2e6;
+}
+
+.connection-guide h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #495057;
+  font-size: 1rem;
+}
+
+.connection-guide ol {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #495057;
+  line-height: 1.6;
+}
+
+.connection-guide li {
+  margin-bottom: 0.5rem;
 }
 </style>

@@ -4,8 +4,9 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
 import dotenv from 'dotenv';
-import { DatabaseManager } from './database/connection';
-import { createTables, updateExistingTables } from './database/migrations';
+import fs from 'fs';
+import path from 'path';
+import { LowDbManager } from './database/lowdb-manager';
 import routes from './routes';
 
 // Load environment variables
@@ -24,6 +25,21 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from docs directory (relative to project root)
 app.use('/docs', express.static('../docs'));
+
+// API endpoint to get docs directory structure
+app.get('/docs', (req, res) => {
+  try {
+    const docsPath = path.join(__dirname, '../../docs');
+    const files = fs.readdirSync(docsPath)
+      .filter(file => file.endsWith('.md'))
+      .sort();
+    
+    res.json(files);
+  } catch (error) {
+    console.error('Error reading docs directory:', error);
+    res.status(500).json({ error: 'Failed to read docs directory' });
+  }
+});
 
 // Routes
 app.use('/api', routes);
@@ -50,32 +66,9 @@ app.use((req, res) => {
 // Initialize database and start server
 async function initializeServer() {
   try {
-    // Initialize default database connection
-    const dbManager = DatabaseManager.getInstance();
-    
-    // Create default SQLite database connection for the application itself
-    const defaultConfig = {
-      id: 'default',
-      name: 'default',
-      type: 'sqlite' as const,
-      database: 'easyprompt.db',
-      is_deleted: false,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
-    
-    const connection = await dbManager.createConnection(defaultConfig);
-    
-    // Store the default connection in DatabaseManager
-    // This ensures DatabaseConfigService can access it
-    const connectionKey = `${defaultConfig.name}_${defaultConfig.database}`;
-    dbManager.connections.set(connectionKey, connection);
-    
-    // Create tables if they don't exist
-    await createTables(connection);
-    
-    // Update existing tables with new columns
-    await updateExistingTables(connection);
+    // Initialize lowdb
+    const dbManager = LowDbManager.getInstance();
+    await dbManager.init();
     
     console.log('Database initialized successfully');
     
@@ -94,15 +87,15 @@ async function initializeServer() {
 // Handle graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
-  const dbManager = DatabaseManager.getInstance();
-  await dbManager.closeAllConnections();
+  const dbManager = LowDbManager.getInstance();
+  await dbManager.save();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully');
-  const dbManager = DatabaseManager.getInstance();
-  await dbManager.closeAllConnections();
+  const dbManager = LowDbManager.getInstance();
+  await dbManager.save();
   process.exit(0);
 });
 
