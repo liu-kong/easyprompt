@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  easyprompt-backend:
+    build:
+      context: ./easyprompt-backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_TYPE=sqlite
+      - DB_DATABASE=/app/data/easyprompt.db
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  easyprompt-frontend:
+    build:
+      context: ./easyprompt-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - easyprompt-backend
+    restart: unless-stopped
+
+  # Optional: MySQL database
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: easyprompt
+      MYSQL_USER: easyprompt
+      MYSQL_PASSWORD: easyprompt
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+    profiles:
+      - mysql
+
+  # Optional: PostgreSQL database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: easyprompt
+      POSTGRES_USER: easyprompt
+      POSTGRES_PASSWORD: easyprompt
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    profiles:
+      - postgres
+
+volumes:
+  mysql_data:
+  postgres_data:
