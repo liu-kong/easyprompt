@@ -13,6 +13,11 @@ const router = createRouter({
       component: () => import('../views/PromptsView.vue'),
     },
     {
+      path: '/repository',
+      name: 'repository',
+      component: () => import('../views/PromptRepositoryView.vue'),
+    },
+    {
       path: '/projects',
       name: 'projects',
       component: () => import('../views/ProjectsView.vue'),
@@ -41,6 +46,11 @@ const router = createRouter({
       path: '/docs/:path?',
       name: 'documentation',
       component: () => import('../components/Documentation.vue'),
+    },
+    {
+      path: '/prompt-testing',
+      name: 'prompt-testing',
+      component: () => import('../views/PromptTestingView.vue'),
     },
   ],
 })

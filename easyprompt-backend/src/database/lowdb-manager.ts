@@ -9,6 +9,9 @@ interface Data {
   promptVersions: any[];
   databaseConfigs: any[];
   exports: any[];
+  repositoryCategories: any[];
+  repositoryPrompts: any[];
+  aiModels: any[];
 }
 
 export class LowDbManager {
@@ -18,7 +21,7 @@ export class LowDbManager {
   private constructor() {
     const file = path.join(__dirname, '../../data.json');
     const adapter = new JSONFile<Data>(file);
-    this.db = new Low<Data>(adapter, { projects: [], prompts: [], promptTables: [], promptVersions: [], databaseConfigs: [], exports: [] });
+    this.db = new Low<Data>(adapter, { projects: [], prompts: [], promptTables: [], promptVersions: [], databaseConfigs: [], exports: [], repositoryCategories: [], repositoryPrompts: [], aiModels: [] });
   }
 
   public static getInstance(): LowDbManager {
@@ -31,7 +34,7 @@ export class LowDbManager {
   public async init(): Promise<void> {
     await this.db.read();
     if (!this.db.data) {
-      this.db.data = { projects: [], prompts: [], promptTables: [], promptVersions: [], databaseConfigs: [], exports: [] };
+      this.db.data = { projects: [], prompts: [], promptTables: [], promptVersions: [], databaseConfigs: [], exports: [], repositoryCategories: [], repositoryPrompts: [], aiModels: [] };
       await this.db.write();
     }
   }
@@ -41,6 +44,20 @@ export class LowDbManager {
   }
 
   public async save(): Promise<void> {
+    await this.db.write();
+  }
+
+  public async get(key: keyof Data): Promise<any[]> {
+    await this.db.read();
+    return this.db.data?.[key] || [];
+  }
+
+  public async set(key: keyof Data, value: any[]): Promise<void> {
+    await this.db.read();
+    if (!this.db.data) {
+      this.db.data = { projects: [], prompts: [], promptTables: [], promptVersions: [], databaseConfigs: [], exports: [], repositoryCategories: [], repositoryPrompts: [], aiModels: [] };
+    }
+    this.db.data[key] = value;
     await this.db.write();
   }
 }

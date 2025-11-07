@@ -488,5 +488,173 @@
     }
   ],
   "databaseConfigs": [],
-  "exports": []
+  "exports": [],
+  "repositoryCategories": [
+    {
+      "id": "cat-writing",
+      "name": "写作助手",
+      "description": "用于各种写作任务的提示词",
+      "icon": "✍️",
+      "prompt_count": 1
+    },
+    {
+      "id": "cat-coding",
+      "name": "编程开发",
+      "description": "编程和软件开发相关的提示词",
+      "icon": "💻",
+      "prompt_count": 1
+    },
+    {
+      "id": "cat-analysis",
+      "name": "数据分析",
+      "description": "数据分析和处理相关的提示词",
+      "icon": "📊",
+      "prompt_count": 1
+    },
+    {
+      "id": "cat-creative",
+      "name": "创意设计",
+      "description": "创意和设计相关的提示词",
+      "icon": "🎨",
+      "prompt_count": 0
+    },
+    {
+      "id": "cat-business",
+      "name": "商业应用",
+      "description": "商业和营销相关的提示词",
+      "icon": "💼",
+      "prompt_count": 0
+    },
+    {
+      "id": "cat-education",
+      "name": "教育学习",
+      "description": "教育和学习相关的提示词",
+      "icon": "📚",
+      "prompt_count": 0
+    }
+  ],
+  "repositoryPrompts": [
+    {
+      "id": "1b80f6d9-9c11-46f0-945f-524062f100e5",
+      "title": "文章大纲生成器",
+      "content": "请为以下主题生成一个详细的文章大纲：\n\n主题：{主题}\n目标读者：{目标读者}\n文章长度：{文章长度}\n\n请包含以下部分：\n1. 引言\n2. 主要论点（至少3个）\n3. 每个论点的支持证据\n4. 反驳观点及回应\n5. 结论\n\n请确保大纲逻辑清晰，结构合理。",
+      "description": "帮助用户为任何主题生成结构化的文章大纲",
+      "category": "cat-writing",
+      "tags": [
+        "写作",
+        "大纲",
+        "结构化",
+        "文章"
+      ],
+      "author": "EasyPrompt Team",
+      "version": "1.0",
+      "created_at": "2025-11-07T13:15:40.106Z",
+      "updated_at": "2025-11-07T13:15:40.126Z",
+      "usage_count": 0,
+      "rating": 4.5,
+      "is_public": true
+    },
+    {
+      "id": "c1ab7d3c-dca3-4ef4-b005-2b498b98df68",
+      "title": "代码审查助手",
+      "content": "请对以下代码进行全面的审查，重点关注：\n\n代码：\n```\n{代码}\n```\n\n请检查以下方面：\n1. 代码质量和可读性\n2. 潜在的bug和错误\n3. 性能优化建议\n4. 安全性问题\n5. 最佳实践遵循情况\n6. 代码风格一致性\n\n请提供具体的改进建议和修改后的代码示例。",
+      "description": "帮助开发者进行全面的代码审查，提高代码质量",
+      "category": "cat-coding",
+      "tags": [
+        "代码审查",
+        "质量",
+        "优化",
+        "最佳实践"
+      ],
+      "author": "EasyPrompt Team",
+      "version": "1.0",
+      "created_at": "2025-11-07T13:15:40.126Z",
+      "updated_at": "2025-11-07T13:15:40.126Z",
+      "usage_count": 0,
+      "rating": 4.7,
+      "is_public": true
+    },
+    {
+      "id": "8e6b3a9f-c929-49de-ac63-2eae66e33cea",
+      "title": "数据分析报告生成器",
+      "content": "基于以下数据，请生成一份专业的数据分析报告：\n\n数据描述：{数据描述}\n分析目标：{分析目标}\n数据集：{数据集}\n\n报告应包含：\n1. 数据概览和摘要统计\n2. 关键发现和洞察\n3. 数据可视化建议\n4. 趋势分析和预测\n5. 结论和建议\n\n请使用清晰、专业的语言，并确保分析结果准确可靠。",
+      "description": "帮助用户从数据中提取有价值的洞察并生成专业报告",
+      "category": "cat-analysis",
+      "tags": [
+        "数据分析",
+        "报告",
+        "洞察",
+        "可视化"
+      ],
+      "author": "EasyPrompt Team",
+      "version": "1.0",
+      "created_at": "2025-11-07T13:15:40.126Z",
+      "updated_at": "2025-11-07T13:15:40.126Z",
+      "usage_count": 0,
+      "rating": 4.6,
+      "is_public": true
+    }
+  ],
+  "aiModels": [
+    {
+      "name": "GPT-4",
+      "provider": "OpenAI",
+      "apiEndpoint": "https://api.openai.com/v1/chat/completions",
+      "apiKey": "",
+      "model": "gpt-4",
+      "maxTokens": 4096,
+      "temperature": 0.7,
+      "topP": 1,
+      "description": "OpenAI GPT-4 模型，适合复杂任务和高质量对话",
+      "isActive": true,
+      "id": "model_1762522516575",
+      "createdAt": "2025-11-07T13:35:16.575Z",
+      "updatedAt": "2025-11-07T13:35:16.575Z"
+    },
+    {
+      "name": "GPT-3.5 Turbo",
+      "provider": "OpenAI",
+      "apiEndpoint": "https://api.openai.com/v1/chat/completions",
+      "apiKey": "",
+      "model": "gpt-3.5-turbo",
+      "maxTokens": 4096,
+      "temperature": 0.7,
+      "topP": 1,
+      "description": "OpenAI GPT-3.5 Turbo 模型，快速响应，适合一般对话",
+      "isActive": true,
+      "id": "model_1762522516659",
+      "createdAt": "2025-11-07T13:35:16.659Z",
+      "updatedAt": "2025-11-07T13:35:16.659Z"
+    },
+    {
+      "name": "Claude 3 Sonnet",
+      "provider": "Anthropic",
+      "apiEndpoint": "https://api.anthropic.com/v1/messages",
+      "apiKey": "",
+      "model": "claude-3-sonnet-20240229",
+      "maxTokens": 4096,
+      "temperature": 0.7,
+      "topP": 1,
+      "description": "Anthropic Claude 3 Sonnet 模型，平衡性能和质量",
+      "isActive": true,
+      "id": "model_1762522516713",
+      "createdAt": "2025-11-07T13:35:16.713Z",
+      "updatedAt": "2025-11-07T13:35:16.713Z"
+    },
+    {
+      "name": "Gemini Pro",
+      "provider": "Google",
+      "apiEndpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+      "apiKey": "",
+      "model": "gemini-pro",
+      "maxTokens": 2048,
+      "temperature": 0.7,
+      "topP": 1,
+      "description": "Google Gemini Pro 模型，多模态支持",
+      "isActive": true,
+      "id": "model_1762522516799",
+      "createdAt": "2025-11-07T13:35:16.799Z",
+      "updatedAt": "2025-11-07T13:35:16.799Z"
+    }
+  ]
 }

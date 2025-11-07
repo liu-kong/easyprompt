@@ -1,7 +1,12 @@
 <template>
   <div class="export">
     <div class="header">
-      <h2>数据导出</h2>
+      <div class="header-content">
+        <div class="header-text">
+          <h2>数据导出</h2>
+          <p class="header-subtitle">导出项目和提示词数据</p>
+        </div>
+      </div>
     </div>
 
     <div class="export-sections">
@@ -132,7 +137,7 @@ const exportProjectAsSQL = async () => {
   exporting.value = true
   try {
     const response = await api.get(`/export/project/${selectedProjectId.value}?operation=${exportFormat.value}`)
-    exportResult.value = response
+    exportResult.value = response.data || response
   } catch (err) {
     alert('导出失败: ' + (err as Error).message)
   } finally {
@@ -160,7 +165,7 @@ const exportTableAsSQL = async () => {
   exporting.value = true
   try {
     const response = await api.get(`/export/prompts/${selectedTableId.value}?operation=${exportFormat.value}`)
-    exportResult.value = response
+    exportResult.value = response.data || response
   } catch (err) {
     alert('导出失败: ' + (err as Error).message)
   } finally {
@@ -211,16 +216,34 @@ watch(selectedProjectId, loadTables)
 .export {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1.5rem;
 }
 
 .header {
-  text-align: center;
   margin-bottom: 2rem;
 }
 
-.header h2 {
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.header-text h2 {
+  margin: 0 0 0.5rem 0;
   color: #2c3e50;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.header-subtitle {
+  margin: 0;
+  color: #6c757d;
+  font-size: 1rem;
 }
 
 .export-sections {
@@ -231,14 +254,23 @@ watch(selectedProjectId, loadTables)
 
 .export-section {
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 2rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.export-section:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
 }
 
 .export-section h3 {
   margin: 0 0 1.5rem 0;
   color: #2c3e50;
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
 .form-group {
@@ -248,16 +280,25 @@ watch(selectedProjectId, loadTables)
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #2c3e50;
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.9rem;
 }
 
 .form-group select {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.form-group select:focus {
+  outline: none;
+  border-color: #1976D2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
 }
 
 .export-actions {
@@ -276,20 +317,23 @@ watch(selectedProjectId, loadTables)
 .export-result {
   margin-top: 2rem;
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 2rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
 }
 
 .export-result h3 {
   margin: 0 0 1rem 0;
   color: #2c3e50;
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
 .result-content {
   background: #f8f9fa;
   border: 1px solid #e9ecef;
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 1rem;
   margin-bottom: 1.5rem;
   max-height: 400px;
@@ -300,9 +344,10 @@ watch(selectedProjectId, loadTables)
   margin: 0;
   white-space: pre-wrap;
   word-wrap: break-word;
-  font-family: monospace;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
   font-size: 0.9rem;
-  line-height: 1.4;
+  line-height: 1.5;
+  color: #495057;
 }
 
 .result-actions {
@@ -313,10 +358,17 @@ watch(selectedProjectId, loadTables)
 .btn {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 4px;
-  font-size: 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn:disabled {
@@ -325,20 +377,26 @@ watch(selectedProjectId, loadTables)
 }
 
 .btn-primary {
-  background: #1976D2;
+  background: linear-gradient(135deg, #1976D2, #1565C0);
   color: white;
+  box-shadow: 0 4px 8px rgba(25, 118, 210, 0.25);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #1565C0;
+  background: linear-gradient(135deg, #1565C0, #0D47A1);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(25, 118, 210, 0.35);
 }
 
 .btn-secondary {
-  background: #6C757D;
+  background: linear-gradient(135deg, #6C757D, #5A6268);
   color: white;
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.25);
 }
 
-.btn-secondary:hover:not(:disabled) {
-  background: #5A6268;
+.btn-secondary:hover {
+  background: linear-gradient(135deg, #5A6268, #495057);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(108, 117, 125, 0.35);
 }
 </style>

@@ -1,14 +1,18 @@
 <template>
   <div class="comparison">
     <div class="header">
-      <h2>对比分析</h2>
+      <div class="header-content">
+        <div class="header-text">
+          <h2>对比分析</h2>
+          <p class="header-subtitle">比较提示词表和版本之间的差异</p>
+        </div>
+      </div>
       <div class="comparison-tabs">
         <button
           class="tab-btn"
           :class="{ active: activeTab === 'tables' }"
           @click="activeTab = 'tables'"
         >
-          <span class="tab-icon">表</span>
           表对比
         </button>
         <button
@@ -16,7 +20,6 @@
           :class="{ active: activeTab === 'versions' }"
           @click="activeTab = 'versions'"
         >
-          <span class="tab-icon">版</span>
           版本对比
         </button>
       </div>
@@ -33,7 +36,6 @@
         <div class="comparison-inputs">
           <div class="input-group">
             <label class="input-label">
-              <span class="label-icon">1</span>
               选择第一个表
             </label>
             <select
@@ -54,7 +56,6 @@
           
           <div class="input-group">
             <label class="input-label">
-              <span class="label-icon">2</span>
               选择第二个表
             </label>
             <select
@@ -76,7 +77,6 @@
             class="btn btn-primary btn-large"
             :disabled="!table1Id || !table2Id || comparing"
           >
-            <span class="btn-icon">搜索</span>
             开始对比
           </button>
         </div>
@@ -94,7 +94,6 @@
         <div class="comparison-inputs">
           <div class="input-group full-width">
             <label class="input-label">
-              <span class="label-icon">文</span>
               选择提示词
             </label>
             <select
@@ -114,7 +113,6 @@
           <div class="version-inputs">
             <div class="input-group">
               <label class="input-label">
-                <span class="label-icon">1</span>
                 选择版本1
               </label>
               <select v-model="version1" class="form-select">
@@ -131,7 +129,6 @@
             
             <div class="input-group">
               <label class="input-label">
-                <span class="label-icon">2</span>
                 选择版本2
               </label>
               <select v-model="version2" class="form-select">
@@ -149,7 +146,6 @@
               class="btn btn-primary btn-large"
               :disabled="!versionPromptId || !version1 || !version2 || comparing"
             >
-              <span class="btn-icon">搜索</span>
               开始对比
             </button>
           </div>
@@ -166,10 +162,7 @@
     <!-- 表对比结果 -->
     <div v-if="tableComparisonResult" class="comparison-result">
       <div class="result-header">
-        <h3>
-          <span class="result-icon">表</span>
-          表对比结果
-        </h3>
+        <h3>表对比结果</h3>
         <button @click="clearTableResult" class="btn btn-outline btn-small">
           清除结果
         </button>
@@ -213,10 +206,7 @@
     <!-- 版本对比结果 -->
     <div v-if="versionComparisonResult" class="comparison-result">
       <div class="result-header">
-        <h3>
-          <span class="result-icon">版</span>
-          版本对比结果
-        </h3>
+        <h3>版本对比结果</h3>
         <button @click="clearVersionResult" class="btn btn-outline btn-small">
           清除结果
         </button>
@@ -375,25 +365,41 @@ const clearVersionResult = () => {
 .comparison {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1.5rem;
 }
 
 .header {
-  text-align: center;
   margin-bottom: 2rem;
 }
 
-.header h2 {
-  color: #2c3e50;
-  font-size: 2.2rem;
-  font-weight: 600;
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   margin-bottom: 1.5rem;
+}
+
+.header-text h2 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.header-subtitle {
+  margin: 0;
+  color: #6c757d;
+  font-size: 1rem;
 }
 
 .comparison-tabs {
   display: flex;
   justify-content: center;
-  gap: 1rem;
+  gap: 0.5rem;
   margin-bottom: 2rem;
 }
 
@@ -416,16 +422,15 @@ const clearVersionResult = () => {
   border-color: #1976D2;
   color: #1976D2;
   background: rgba(25, 118, 210, 0.05);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.15);
 }
 
 .tab-btn.active {
   border-color: #1976D2;
-  background: #1976D2;
+  background: linear-gradient(135deg, #1976D2, #1565C0);
   color: white;
-}
-
-.tab-icon {
-  font-size: 1.2rem;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.25);
 }
 
 .comparison-content {
@@ -485,13 +490,9 @@ const clearVersionResult = () => {
   font-size: 0.95rem;
 }
 
-.label-icon {
-  font-size: 1.1rem;
-}
-
 .form-select {
   padding: 0.875rem 1rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid #e9ecef;
   border-radius: 8px;
   font-size: 1rem;
   background: white;
@@ -581,13 +582,6 @@ const clearVersionResult = () => {
   color: #2c3e50;
   font-size: 1.5rem;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.result-icon {
-  font-size: 1.3rem;
 }
 
 .result-summary {
@@ -709,12 +703,15 @@ const clearVersionResult = () => {
   border: none;
   border-radius: 8px;
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn:disabled {
@@ -725,13 +722,13 @@ const clearVersionResult = () => {
 .btn-primary {
   background: linear-gradient(135deg, #1976D2, #1565C0);
   color: white;
-  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+  box-shadow: 0 4px 8px rgba(25, 118, 210, 0.25);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: linear-gradient(135deg, #1565C0, #0D47A1);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(25, 118, 210, 0.35);
 }
 
 .btn-large {
@@ -742,21 +739,19 @@ const clearVersionResult = () => {
 .btn-outline {
   background: transparent;
   color: #6c757d;
-  border: 1px solid #6c757d;
+  border: 2px solid #6c757d;
 }
 
 .btn-outline:hover {
   background: #6c757d;
   color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(108, 117, 125, 0.25);
 }
 
 .btn-small {
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
-}
-
-.btn-icon {
-  font-size: 1.1rem;
 }
 
 @media (max-width: 768px) {

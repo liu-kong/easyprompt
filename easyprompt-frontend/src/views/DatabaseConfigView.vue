@@ -1,10 +1,15 @@
 <template>
   <div class="database-config">
     <div class="header">
-      <h2>数据库配置</h2>
-      <button class="btn btn-primary" @click="showCreateModal = true">
-        新增数据库配置
-      </button>
+      <div class="header-content">
+        <div class="header-text">
+          <h2>数据库配置</h2>
+          <p class="header-subtitle">管理和配置数据库连接</p>
+        </div>
+        <button class="btn btn-primary btn-large" @click="showCreateModal = true">
+          新增数据库配置
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="loading">
@@ -57,6 +62,12 @@
           >
             PostgreSQL
           </button>
+          <button
+            @click="activeSqlTab = 'mapping'"
+            :class="['sql-tab', { active: activeSqlTab === 'mapping' }]"
+          >
+            字段映射
+          </button>
         </div>
         
         <div class="sql-content">
@@ -78,6 +89,75 @@
             <button @click="copySqlCode('postgresql')" class="copy-sql-btn">
               {{ postgresqlCopied ? '已复制!' : '复制SQL代码' }}
             </button>
+          </div>
+        </div>
+        
+        <!-- 字段映射区域 -->
+        <div v-if="activeSqlTab === 'mapping'" class="mapping-container">
+          <h4>现有表字段映射</h4>
+          <p>如果您已有现有的表结构，可以将您的字段映射到系统的标准字段，以便正常使用提示词管理功能。</p>
+          
+          <div class="mapping-section">
+            <h5>提示词表字段映射</h5>
+            <div class="mapping-table">
+              <div class="mapping-header">
+                <div class="mapping-col">系统字段</div>
+                <div class="mapping-col">字段说明</div>
+                <div class="mapping-col">您的字段</div>
+              </div>
+              
+              <div class="mapping-row" v-for="field in promptFields" :key="field.name">
+                <div class="mapping-col system-field">{{ field.name }}</div>
+                <div class="mapping-col field-desc">{{ field.description }}</div>
+                <div class="mapping-col">
+                  <input
+                    v-model="fieldMappings[field.name]"
+                    type="text"
+                    :placeholder="field.name"
+                    class="mapping-input"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mapping-section">
+            <h5>提示词分类表字段映射</h5>
+            <div class="mapping-table">
+              <div class="mapping-header">
+                <div class="mapping-col">系统字段</div>
+                <div class="mapping-col">字段说明</div>
+                <div class="mapping-col">您的字段</div>
+              </div>
+              
+              <div class="mapping-row" v-for="field in promptTableFields" :key="field.name">
+                <div class="mapping-col system-field">{{ field.name }}</div>
+                <div class="mapping-col field-desc">{{ field.description }}</div>
+                <div class="mapping-col">
+                  <input
+                    v-model="fieldMappings[field.name]"
+                    type="text"
+                    :placeholder="field.name"
+                    class="mapping-input"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mapping-actions">
+            <button @click="resetMappings" class="btn btn-secondary">重置映射</button>
+            <button @click="copyMappingConfig" class="btn btn-primary">复制映射配置</button>
+          </div>
+          
+          <div class="mapping-note">
+            <p><strong>使用说明：</strong></p>
+            <ol>
+              <li>在"您的字段"列中输入您现有表中对应的字段名</li>
+              <li>如果某个字段在您的表中不存在，可以留空</li>
+              <li>点击"复制映射配置"获取JSON格式的映射配置</li>
+              <li>在数据库配置中应用此映射配置</li>
+            </ol>
           </div>
         </div>
         
@@ -159,8 +239,12 @@
     <!-- 创建/编辑数据库配置模态框 -->
     <div v-if="showCreateModal || showEditModal" class="modal-overlay" @click="closeModal">
       <div class="modal" @click.stop>
-        <h3>{{ editingConfig ? '编辑数据库配置' : '新增数据库配置' }}</h3>
-        <form @submit.prevent="saveConfig" class="config-form">
+        <div class="modal-header">
+          <h3>{{ editingConfig ? '编辑数据库配置' : '新增数据库配置' }}</h3>
+          <button class="modal-close" @click="closeModal">×</button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="saveConfig" class="config-form">
           <div class="form-group">
             <label for="name">配置名称</label>
             <input
@@ -253,27 +337,32 @@
               />
             </div>
           </div>
-          
-          <div class="form-actions">
-            <button type="button" @click="closeModal" class="btn btn-secondary">
-              取消
-            </button>
-            <button type="button" @click="testCurrentConfig" class="btn btn-secondary">
-              测试连接
-            </button>
-            <button type="submit" class="btn btn-primary" :disabled="!isFormValid">
-              {{ editingConfig ? '更新' : '创建' }}
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
+        <div class="form-actions">
+          <button type="button" @click="closeModal" class="btn btn-secondary">
+            取消
+          </button>
+          <button type="button" @click="testCurrentConfig" class="btn btn-secondary">
+            测试连接
+          </button>
+          <button type="submit" class="btn btn-primary" :disabled="!isFormValid" @click="saveConfig">
+            {{ editingConfig ? '更新' : '创建' }}
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- 删除确认模态框 -->
     <div v-if="showDeleteModal" class="modal-overlay" @click="closeDeleteModal">
       <div class="modal modal-small" @click.stop>
-        <h3>确认删除</h3>
-        <p>确定要删除数据库配置 "{{ deletingConfig?.name }}" 吗？此操作不可撤销。</p>
+        <div class="modal-header">
+          <h3>确认删除</h3>
+          <button class="modal-close" @click="closeDeleteModal">×</button>
+        </div>
+        <div class="modal-body">
+          <p>确定要删除数据库配置 "{{ deletingConfig?.name }}" 吗？此操作不可撤销。</p>
+        </div>
         <div class="form-actions">
           <button @click="closeDeleteModal" class="btn btn-secondary">
             取消
@@ -298,13 +387,91 @@ const error = ref<string | null>(null)
 const testingConnection = ref<string | null>(null)
 
 // SQL引导区域相关状态
-const activeSqlTab = ref<'mysql' | 'postgresql'>('mysql')
+const activeSqlTab = ref<'mysql' | 'postgresql' | 'mapping'>('mysql')
 const mysqlCopied = ref(false)
 const postgresqlCopied = ref(false)
 const promptsTableName = ref('prompts')
 const promptTablesTableName = ref('prompt_tables')
 const mysqlSql = ref('')
 const postgresqlSql = ref('')
+
+// 字段映射相关状态
+const fieldMappings = ref<Record<string, string>>({})
+
+// 系统字段定义
+const promptFields = [
+  { name: 'id', description: '主键ID，唯一标识符' },
+  { name: 'code', description: '提示词编码，用于业务识别' },
+  { name: 'title', description: '提示词标题，显示名称' },
+  { name: 'content', description: '提示词内容，核心文本' },
+  { name: 'tags', description: '标签，多个标签用逗号分隔' },
+  { name: 'version', description: '版本号，默认为1.0.0' },
+  { name: 'description', description: '描述信息，详细说明' },
+  { name: 'is_active', description: '是否激活，布尔值' },
+  { name: 'table_id', description: '所属分类表ID，外键' },
+  { name: 'created_at', description: '创建时间，时间戳' },
+  { name: 'updated_at', description: '更新时间，时间戳' }
+]
+
+const promptTableFields = [
+  { name: 'id', description: '主键ID，唯一标识符' },
+  { name: 'name', description: '分类名称，显示名称' },
+  { name: 'table_name', description: '表名，唯一标识' },
+  { name: 'project_id', description: '所属项目ID，外键' },
+  { name: 'description', description: '描述信息，详细说明' },
+  { name: 'created_at', description: '创建时间，时间戳' },
+  { name: 'updated_at', description: '更新时间，时间戳' }
+]
+
+// 初始化字段映射
+const initializeFieldMappings = () => {
+  const mappings: Record<string, string> = {}
+  promptFields.forEach(field => {
+    mappings[field.name] = field.name
+  })
+  promptTableFields.forEach(field => {
+    mappings[field.name] = field.name
+  })
+  fieldMappings.value = mappings
+}
+
+// 重置字段映射
+const resetMappings = () => {
+  initializeFieldMappings()
+}
+
+// 复制映射配置
+const copyMappingConfig = async () => {
+  const config: Record<string, Record<string, string>> = {
+    prompts: {},
+    prompt_tables: {}
+  }
+  
+  promptFields.forEach(field => {
+    const fieldValue = fieldMappings.value[field.name]
+    if (fieldValue && fieldValue !== field.name && config.prompts) {
+      config.prompts[field.name] = fieldValue
+    }
+  })
+  
+  promptTableFields.forEach(field => {
+    const fieldValue = fieldMappings.value[field.name]
+    if (fieldValue && fieldValue !== field.name && config.prompt_tables) {
+      config.prompt_tables[field.name] = fieldValue
+    }
+  })
+  
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(config, null, 2))
+    alert('映射配置已复制到剪贴板！')
+  } catch (err) {
+    console.error('复制失败:', err)
+    alert('复制失败，请手动复制')
+  }
+}
+
+// 初始化字段映射
+initializeFieldMappings()
 
 // 初始化SQL脚本
 const updateSqlScripts = () => {
@@ -602,19 +769,39 @@ const copySqlCode = async (type: 'mysql' | 'postgresql') => {
 .database-config {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1.5rem;
 }
 
 .header {
+  margin-bottom: 2rem;
+}
+
+.header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-.header h2 {
-  margin: 0;
+.header-text h2 {
+  margin: 0 0 0.5rem 0;
   color: #2c3e50;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.header-subtitle {
+  margin: 0;
+  color: #6c757d;
+  font-size: 1rem;
+}
+
+.btn-large {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
 }
 
 .loading, .error, .empty-state {
@@ -639,10 +826,16 @@ const copySqlCode = async (type: 'mysql' | 'postgresql') => {
 
 .config-card {
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid #1976D2;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.config-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
 }
 
 .config-header {
@@ -720,22 +913,74 @@ const copySqlCode = async (type: 'mysql' | 'postgresql') => {
 
 .modal {
   background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
+  border-radius: 12px;
+  padding: 0;
   width: 95%;
   max-width: 600px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   max-height: 95vh;
-  overflow-y: auto;
+  overflow: hidden;
+  animation: modalSlideIn 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-small {
   max-width: 400px;
 }
 
-.modal h3 {
-  margin: 0 0 1.5rem 0;
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+}
+
+.modal-header h3 {
+  margin: 0;
   color: #2c3e50;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6c757d;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #e74c3c;
+  transform: rotate(90deg);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .config-form {
@@ -747,27 +992,31 @@ const copySqlCode = async (type: 'mysql' | 'postgresql') => {
 .form-group {
   display: flex;
   flex-direction: column;
+  margin-bottom: 1.25rem;
 }
 
 .form-group label {
   margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #2c3e50;
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.9rem;
 }
 
 .form-group input,
 .form-group select {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  background: white;
 }
 
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
   border-color: #1976D2;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
 }
 
 .form-actions {
@@ -775,17 +1024,25 @@ const copySqlCode = async (type: 'mysql' | 'postgresql') => {
   justify-content: flex-end;
   gap: 1rem;
   margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid #eee;
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
+  border-top: 1px solid #e9ecef;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,1));
 }
 
 .btn {
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn:disabled {
@@ -794,50 +1051,61 @@ const copySqlCode = async (type: 'mysql' | 'postgresql') => {
 }
 
 .btn-primary {
-  background: #1976D2;
+  background: linear-gradient(135deg, #1976D2, #1565C0);
   color: white;
+  box-shadow: 0 4px 8px rgba(25, 118, 210, 0.25);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #1565C0;
+  background: linear-gradient(135deg, #1565C0, #0D47A1);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(25, 118, 210, 0.35);
 }
 
 .btn-secondary {
-  background: #6C757D;
+  background: linear-gradient(135deg, #6C757D, #5A6268);
   color: white;
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.25);
 }
 
 .btn-secondary:hover {
-  background: #5A6268;
+  background: linear-gradient(135deg, #5A6268, #495057);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(108, 117, 125, 0.35);
 }
 
 .btn-danger {
-  background: #DC3545;
+  background: linear-gradient(135deg, #DC3545, #BB2D3B);
   color: white;
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.25);
 }
 
 .btn-danger:hover {
-  background: #BB2D3B;
+  background: linear-gradient(135deg, #BB2D3B, #A02622);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(220, 53, 69, 0.35);
 }
 
 .btn-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.8rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
 }
 
 /* SQL引导区域样式 */
 .sql-guide-section {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
   margin-bottom: 2rem;
-  border: 1px solid #e9ecef;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
 }
 
 .sql-guide-section h3 {
   margin-top: 0;
   color: #2c3e50;
-  font-size: 1.2rem;
+  font-size: 1.5rem;
+  font-weight: 600;
   margin-bottom: 1rem;
 }
 
@@ -850,28 +1118,31 @@ const copySqlCode = async (type: 'mysql' | 'postgresql') => {
 .table-name-input {
   display: flex;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   gap: 1rem;
 }
 
 .table-name-input label {
   min-width: 140px;
-  font-weight: 500;
+  font-weight: 600;
   color: #495057;
+  font-size: 0.9rem;
 }
 
 .table-name-input input {
   flex: 1;
-  padding: 0.5rem;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
   font-size: 0.9rem;
+  transition: all 0.2s ease;
+  background: white;
 }
 
 .table-name-input input:focus {
   outline: none;
   border-color: #1976D2;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
 }
 
 .sql-tabs {
@@ -888,17 +1159,19 @@ const copySqlCode = async (type: 'mysql' | 'postgresql') => {
   font-size: 1rem;
   color: #6c757d;
   border-bottom: 2px solid transparent;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .sql-tab:hover {
   color: #495057;
+  background: rgba(25, 118, 210, 0.05);
 }
 
 .sql-tab.active {
   color: #1976D2;
   border-bottom-color: #1976D2;
   font-weight: 500;
+  background: rgba(25, 118, 210, 0.05);
 }
 
 .sql-content {
@@ -907,62 +1180,71 @@ const copySqlCode = async (type: 'mysql' | 'postgresql') => {
 
 .sql-code-container {
   background: white;
-  border-radius: 6px;
-  padding: 1rem;
-  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .sql-code-container h4 {
   margin-top: 0;
   margin-bottom: 1rem;
   color: #495057;
-  font-size: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .sql-code {
   background: #f8f9fa;
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 1rem;
   overflow-x: auto;
   margin-bottom: 1rem;
+  border: 1px solid #e9ecef;
 }
 
 .sql-code pre {
   margin: 0;
-  font-family: 'Courier New', monospace;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
   font-size: 0.9rem;
-  line-height: 1.4;
+  line-height: 1.5;
   color: #495057;
   white-space: pre-wrap;
 }
 
 .copy-sql-btn {
-  background: #6c757d;
+  background: linear-gradient(135deg, #6c757d, #5a6268);
   color: white;
   border: none;
   padding: 0.5rem 1rem;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
-  transition: background-color 0.2s;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(108, 117, 125, 0.2);
 }
 
 .copy-sql-btn:hover {
-  background: #5a6268;
+  background: linear-gradient(135deg, #5a6268, #495057);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
 }
 
 .connection-guide {
   background: white;
-  border-radius: 6px;
-  padding: 1rem;
-  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .connection-guide h4 {
   margin-top: 0;
   margin-bottom: 1rem;
   color: #495057;
-  font-size: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .connection-guide ol {
@@ -974,5 +1256,133 @@ const copySqlCode = async (type: 'mysql' | 'postgresql') => {
 
 .connection-guide li {
   margin-bottom: 0.5rem;
+}
+
+/* 字段映射样式 */
+.mapping-container {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid #e9ecef;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.mapping-container h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #495057;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.mapping-container p {
+  margin-bottom: 1.5rem;
+  color: #495057;
+  line-height: 1.5;
+}
+
+.mapping-section {
+  margin-bottom: 2rem;
+}
+
+.mapping-section h5 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.mapping-table {
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mapping-header {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1.5fr;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-bottom: 1px solid #e9ecef;
+}
+
+.mapping-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1.5fr;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.mapping-row:last-child {
+  border-bottom: none;
+}
+
+.mapping-col {
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  border-right: 1px solid #e9ecef;
+}
+
+.mapping-col:last-child {
+  border-right: none;
+}
+
+.system-field {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-weight: 600;
+  color: #495057;
+  background: #f8f9fa;
+}
+
+.field-desc {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.mapping-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 2px solid #e9ecef;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  transition: all 0.2s ease;
+}
+
+.mapping-input:focus {
+  outline: none;
+  border-color: #1976D2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.mapping-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.mapping-note {
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 1rem;
+  border-left: 4px solid #1976D2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.mapping-note p {
+  margin: 0 0 0.5rem 0;
+  color: #495057;
+  font-weight: 500;
+}
+
+.mapping-note ol {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #495057;
+}
+
+.mapping-note li {
+  margin-bottom: 0.25rem;
 }
 </style>

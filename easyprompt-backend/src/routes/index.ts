@@ -5,6 +5,8 @@ import { ExportController } from '../controllers/exportController';
 import { ComparisonController } from '../controllers/comparisonController';
 import { CodeGenerationController } from '../controllers/codeGenerationController';
 import { DatabaseConfigController } from '../controllers/databaseConfigController';
+import { RepositoryController } from '../controllers/repositoryController';
+import { AIModelController } from '../controllers/aiModelController';
 
 const router = Router();
 const projectController = new ProjectController();
@@ -13,6 +15,8 @@ const exportController = new ExportController();
 const comparisonController = new ComparisonController();
 const codeGenerationController = new CodeGenerationController();
 const databaseConfigController = new DatabaseConfigController();
+const repositoryController = new RepositoryController();
+const aiModelController = new AIModelController();
 
 // Project routes
 router.post('/projects', projectController.createProject);
@@ -72,5 +76,24 @@ router.post('/database-configs/test', databaseConfigController.testDatabaseConne
 router.post('/database-configs/:configId/tables', databaseConfigController.getRemoteTableList);
 router.get('/database-configs/:configId/tables/:tableName/schema', databaseConfigController.getRemoteTableSchema);
 router.get('/database-configs/:configId/tables/:tableName/query', databaseConfigController.queryRemoteTable);
+
+// Repository routes
+router.get('/repository/categories', repositoryController.getCategories);
+router.get('/repository/prompts', repositoryController.getPrompts);
+router.get('/repository/prompts/:id', repositoryController.getPromptById);
+router.post('/repository/prompts', repositoryController.addPrompt);
+router.post('/repository/import', repositoryController.importPrompts);
+router.get('/repository/tags', repositoryController.getPopularTags);
+router.post('/repository/initialize', repositoryController.initializeRepository);
+
+// AI Model routes
+router.get('/ai-models', aiModelController.getModels);
+router.get('/ai-models/active', aiModelController.getActiveModels);
+router.get('/ai-models/:id', aiModelController.getModelById);
+router.post('/ai-models', aiModelController.addModel);
+router.put('/ai-models/:id', aiModelController.updateModel);
+router.delete('/ai-models/:id', aiModelController.deleteModel);
+router.post('/ai-models/chat', aiModelController.callModel);
+router.post('/ai-models/initialize', aiModelController.initializeDefaultModels);
 
 export default router;

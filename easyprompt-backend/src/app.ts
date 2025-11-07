@@ -7,6 +7,8 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { LowDbManager } from './database/lowdb-manager';
+import { RepositoryService } from './services/repositoryService';
+import { AIModelService } from './services/aiModelService';
 import routes from './routes';
 
 // Load environment variables
@@ -71,6 +73,16 @@ async function initializeServer() {
     await dbManager.init();
     
     console.log('Database initialized successfully');
+    
+    // Initialize repository data
+    const repositoryService = new RepositoryService();
+    await repositoryService.initializeRepository();
+    console.log('Repository initialized successfully');
+    
+    // Initialize AI models
+    const aiModelService = new AIModelService();
+    await aiModelService.initializeDefaultModels();
+    console.log('AI models initialized successfully');
     
     // Start server
     app.listen(PORT, () => {
